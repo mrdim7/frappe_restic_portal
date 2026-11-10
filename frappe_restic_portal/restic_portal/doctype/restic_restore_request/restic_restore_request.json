@@ -67,7 +67,7 @@
       "create": 1,
       "select": 1,
       "report": 1,
-      "write": 0,
+      "write": 1,
       "delete": 0,
       "export": 0
     }
