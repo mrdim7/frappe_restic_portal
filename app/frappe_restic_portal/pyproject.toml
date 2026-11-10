@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "frappe_restic_portal"
+version = "0.1.0"
+description = "Customer-site Restic recovery point catalogue and restore requests"
+requires-python = ">=3.10"
+authors = [{name = "Netlinkz"}]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["frappe_restic_portal*"]
+
+[tool.setuptools.package-data]
+frappe_restic_portal = ["**/*.json", "**/*.js", "**/*.txt"]

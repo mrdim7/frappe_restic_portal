@@ -1,0 +1,49 @@
+{
+  "doctype": "DocType",
+  "name": "Restic Platform Message",
+  "module": "Restic Portal",
+  "custom": 0,
+  "autoname": "field:message_id",
+  "engine": "InnoDB",
+  "track_changes": 1,
+  "allow_rename": 0,
+  "fields": [
+    {
+      "fieldname": "message_id",
+      "fieldtype": "Data",
+      "label": "Message ID",
+      "reqd": 1,
+      "unique": 1,
+      "read_only": 1
+    },
+    {
+      "fieldname": "action",
+      "fieldtype": "Data",
+      "label": "Action",
+      "read_only": 1
+    },
+    {
+      "fieldname": "site",
+      "fieldtype": "Data",
+      "label": "Site",
+      "read_only": 1
+    }
+  ],
+  "field_order": [
+    "message_id",
+    "action",
+    "site"
+  ],
+  "permissions": [],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "istable": 0,
+  "is_submittable": 0,
+  "editable_grid": 0,
+  "index_web_pages_for_search": 0,
+  "allow_copy": 0,
+  "quick_entry": 0,
+  "track_seen": 1,
+  "hide_toolbar": 0,
+  "naming_rule": "By fieldname"
+}
