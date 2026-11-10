@@ -45,7 +45,7 @@ def validate_payload(payload, site, now=None):
         raise ValueError("Wrong site or protocol")
     if not re.fullmatch(r"[0-9a-f]{32}", str(payload["request_id"])):
         raise ValueError("Invalid message ID")
-    if payload["action"] not in {"inventory", "list", "status"} or not isinstance(payload["data"], dict):
+    if payload["action"] not in {"inventory", "list", "status", "delete_list", "delete_status"} or not isinstance(payload["data"], dict):
         raise ValueError("Unsupported platform request")
     stamp = datetime.fromisoformat(str(payload["created_at"]).replace("Z", "+00:00"))
     if stamp.tzinfo is None:

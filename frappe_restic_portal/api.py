@@ -56,6 +56,38 @@ def my_restore_requests():
     )
 
 
+@frappe.whitelist(methods=["POST"])
+def request_manual_deletion(snapshot_id, reason, confirmation):
+    """Create a tenant-local, immutable request. No Restic or Press credentials here."""
+    _operator()
+    if confirmation != "DELETE MANUAL BACKUP":
+        frappe.throw("Explicit deletion confirmation required", frappe.ValidationError)
+    if not isinstance(snapshot_id, str) or not SNAP.fullmatch(snapshot_id):
+        frappe.throw("Full snapshot identifier required", frappe.ValidationError)
+    if not isinstance(reason, str) or not (1 <= len(reason.strip()) <= 500):
+        frappe.throw("Reason required (maximum 500 characters)", frappe.ValidationError)
+    point = frappe.get_doc("Restic Recovery Point", snapshot_id)
+    if point.trigger != "manual" or not point.active:
+        frappe.throw("Only available manual backups can be requested for deletion", frappe.PermissionError)
+    verified = frappe.utils.get_datetime(point.verified_at)
+    if not verified or frappe.utils.now_datetime() - verified > timedelta(hours=8):
+        frappe.throw("Refresh the platform recovery-point inventory before requesting deletion", frappe.ValidationError)
+    pending = frappe.db.exists("Restic Manual Delete Request", {
+        "recovery_point": snapshot_id, "request_state": ["in", ["Requested", "Queued"]]
+    })
+    if pending:
+        frappe.throw("A deletion request for this backup is already pending", frappe.ValidationError)
+    try:
+        frappe.flags.restic_manual_delete_internal = True
+        doc = frappe.get_doc({
+            "doctype": "Restic Manual Delete Request", "recovery_point": snapshot_id,
+            "reason": reason.strip(), "requester": frappe.session.user,
+            "requested_at": frappe.utils.now_datetime(), "request_state": "Requested",
+        }).insert(ignore_permissions=True)
+    finally:
+        frappe.flags.restic_manual_delete_internal = False
+    return {"name": doc.name, "request_state": "Requested"}
+
 @frappe.whitelist(allow_guest=True, methods=["POST"])
 def platform_exchange(envelope=None):
     """Signature-protected site-scoped API; no shared secret or vault access in tenant."""
@@ -111,6 +143,48 @@ def platform_exchange(envelope=None):
         # Site admins have no DocType write rights. Only signed platform messages update status.
         frappe.db.set_value("Restic Restore Request", name, "request_state", state)
         response = {"state": "StatusUpdated", "name": name, "request_state": state}
+    elif action == "delete_list":
+        docs = frappe.get_all("Restic Manual Delete Request",
+            fields=["name", "creation", "requester", "recovery_point", "reason", "request_state", "platform_request_id"],
+            filters={"request_state": ["in", ["Requested", "Queued"]]},
+            order_by="creation asc", limit_page_length=200)
+        response = {"state": "DeletionRequestsListed", "requests": docs}
+    elif action == "delete_status":
+        name = data.get("name")
+        state = data.get("state")
+        snap = data.get("snapshot_id")
+        request_id = data.get("platform_request_id")
+        message = data.get("message") or ""
+        if (not isinstance(name, str) or not REQ.fullmatch(name)
+                or state not in {"Queued", "Deleted", "Failed", "Declined"}
+                or not isinstance(snap, str) or not SNAP.fullmatch(snap)
+                or (request_id is not None and (not isinstance(request_id, str)
+                    or not re.fullmatch(r"[a-f0-9]{32}", request_id)))
+                or not isinstance(message, str) or len(message) > 220):
+            raise ValueError("Invalid deletion status message")
+        if not frappe.db.exists("Restic Manual Delete Request", name):
+            frappe.throw("Deletion request not found", frappe.DoesNotExistError)
+        doc = frappe.get_doc("Restic Manual Delete Request", name)
+        if doc.recovery_point != snap:
+            raise ValueError("Deletion request snapshot mismatch")
+        if state == "Queued" and doc.request_state != "Requested":
+            raise ValueError("Deletion request already processed")
+        if state in {"Deleted", "Failed"} and doc.request_state != "Queued":
+            raise ValueError("Deletion receipt without prior queue acknowledgement")
+        if state == "Declined" and doc.request_state != "Requested":
+            raise ValueError("Cannot decline an already queued deletion")
+        if doc.platform_request_id and doc.platform_request_id != request_id:
+            raise ValueError("Deletion platform request mismatch")
+        if state in {"Queued", "Deleted", "Failed"} and not request_id:
+            raise ValueError("Platform request ID required")
+        frappe.db.set_value("Restic Manual Delete Request", name, {
+            "request_state": state,
+            "platform_request_id": request_id or doc.platform_request_id,
+            "last_error": message,
+        })
+        if state == "Deleted":
+            frappe.db.set_value("Restic Recovery Point", snap, "active", 0, update_modified=False)
+        response = {"state": "DeletionStatusUpdated", "name": name, "request_state": state}
     else:
         raise ValueError("Unknown platform action")
     frappe.get_doc({"doctype": "Restic Platform Message", "message_id": msg_id,
