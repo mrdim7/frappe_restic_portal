@@ -1,0 +1,18 @@
+{
+  "doctype":"DocType", "name":"Restic Manual Delete Request", "module":"Restic Portal",
+  "custom":0, "autoname":"hash", "engine":"InnoDB", "track_changes":1, "allow_rename":0,
+  "fields":[
+    {"fieldname":"recovery_point","fieldtype":"Link","label":"Manual recovery point","options":"Restic Recovery Point","reqd":1,"read_only":1,"in_list_view":1},
+    {"fieldname":"reason","fieldtype":"Small Text","label":"Reason for deletion","reqd":1,"read_only":1},
+    {"fieldname":"request_state","fieldtype":"Select","label":"Status","options":"Requested\nQueued\nDeleted\nFailed\nDeclined","default":"Requested","read_only":1,"in_list_view":1},
+    {"fieldname":"requester","fieldtype":"Link","label":"Requested by","options":"User","read_only":1,"in_list_view":1},
+    {"fieldname":"requested_at","fieldtype":"Datetime","label":"Requested at","read_only":1,"in_list_view":1},
+    {"fieldname":"platform_request_id","fieldtype":"Data","label":"Platform request ID","read_only":1},
+    {"fieldname":"last_error","fieldtype":"Small Text","label":"Platform message","read_only":1}
+  ],
+  "field_order":["recovery_point","reason","request_state","requester","requested_at","platform_request_id","last_error"],
+  "permissions":[{"role":"System Manager","read":1,"select":1,"report":1,"create":0,"write":0,"delete":0,"export":0}],
+  "sort_field":"creation","sort_order":"DESC", "istable":0,"is_submittable":0,"editable_grid":0,
+  "index_web_pages_for_search":0,"allow_copy":0,"quick_entry":0,"track_seen":1,"hide_toolbar":0,
+  "naming_rule":"Random","title_field":"recovery_point","search_fields":"recovery_point,request_state,requester"
+}
