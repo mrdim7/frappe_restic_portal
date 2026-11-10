@@ -1,0 +1,6 @@
+app_name = "frappe_restic_portal"
+app_title = "Restic Portal"
+app_publisher = "Netlinkz"
+app_description = "Customer-initiated requests; no restore execution capability"
+app_email = ""
+app_license = "MIT"
